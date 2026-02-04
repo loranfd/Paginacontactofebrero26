@@ -2050,7 +2050,7 @@ if (btnGuardarNotas && textareaNotas) {
         }
       });
     }
-	const botonesAccion = tr.querySelectorAll('.btn-ficha-custom, .btn-detalles-custom');
+	const botonesAccion = tr.querySelectorAll('.btn-ficha-custom');
     botonesAccion.forEach(btn => {
       btn.addEventListener('click', () => {
         sessionStorage.setItem('lastInteractionId', idPersona);
@@ -2348,6 +2348,8 @@ const proximosSiete = datos.filter(c => {
     
     item.addEventListener('click', (e) => {
       if (e.target.closest('.check-hecho')) return;
+      sessionStorage.setItem('lastInteractionId', id);
+      ultimoIdInteractuado = id;
       enfocarContactoEnTabla(id);
       togglePanelNotificaciones(false);
     });
