@@ -144,10 +144,14 @@ function formatearSoloFecha(fechaVal) {
   if (fechaVal instanceof Date) {
     return fechaVal.toLocaleDateString('es-ES');
   }
-  // Si viene como string ISO con hora/zona (ej: 2025-10-06T00:00:00Z),
-  // usar solo la parte YYYY-MM-DD y fijar 00:00 local para evitar desfases
   if (typeof fechaVal === 'string') {
     const str = fechaVal.trim();
+    const isoConZona = /^\d{4}-\d{2}-\d{2}T.*([zZ]|[+-]\d{2}:?\d{2})$/;
+    if (isoConZona.test(str)) {
+      const d = new Date(str);
+      return isNaN(d) ? '' : d.toLocaleDateString('es-ES');
+    }
+    // Si viene como string ISO sin zona, usar solo la parte YYYY-MM-DD y fijar 00:00 local
     const mISO = str.match(/^(\d{4}-\d{2}-\d{2})T/);
     if (mISO) {
       const d = new Date(`${mISO[1]}T00:00:00`);
@@ -263,15 +267,12 @@ async function marcarRecordatorioHecho(id) {
     const contacto = await obtenerFilaPorId(id); // Esta llamada es rápida ahora gracias al CAMBIO #1
     const notasActuales = contacto['Notas'] || '';
     const motivo = contacto['MotivoSeguimiento'] || '';
-    const fechaAviso = obtenerFechaAvisoDate(contacto);
+    const ahora = new Date();
 
-    let nuevaNota = '';
-    if (!isNaN(fechaAviso) && fechaAviso.getFullYear() > 1970) {
-      const fechaFormateada = formatearFechaHoraParaNotas(fechaAviso);
-      nuevaNota = notasActuales ? `${notasActuales}\nLlamado el ${fechaFormateada} — ${motivo || 'Sin asunto'}` : `Llamado el ${fechaFormateada} — ${motivo || 'Sin asunto'}`;
-    } else {
-      nuevaNota = notasActuales ? `${notasActuales}\nLlamado el ${formatearFechaHoraParaNotas(new Date())} — ${motivo || 'Sin asunto'}` : `Llamado el ${formatearFechaHoraParaNotas(new Date())} — ${motivo || 'Sin asunto'}`;
-    }
+    const fechaFormateada = formatearFechaHoraParaNotas(ahora);
+    const nuevaNota = notasActuales
+      ? `${notasActuales}\nLlamado el ${fechaFormateada} — ${motivo || 'Sin asunto'}`
+      : `Llamado el ${fechaFormateada} — ${motivo || 'Sin asunto'}`;
 
     // 2. Crear un objeto con todas las actualizaciones
     const updates = {
@@ -294,7 +295,7 @@ async function marcarRecordatorioHecho(id) {
     const contactoOriginal = originalContactosData.find(c => c.ID === id);
     if (contactoOriginal) Object.assign(contactoOriginal, result.data);
 
-    aplicarFiltro(); // Refresca la tabla manteniendo el orden
+    aplicarFiltro({ resetPage: false }); // Refresca la tabla manteniendo el orden
 
   } catch (e) {
     handleError('Error al marcar recordatorio como hecho', e);
