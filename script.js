@@ -29,6 +29,7 @@ let filtroViabilidadActivo = false;
 let paginaActual = 1;
 const CONTACTOS_POR_PAGINA = 20;
 let searchQuery = '';
+let searchDebounceId = null;
 // Función auxiliar para normalización de strings (nueva para reutilización)
 
 // --- Función universal con reintento automático ---
@@ -2791,7 +2792,13 @@ if (thNombre) {
       notificacionesPendientesTotalMostradas = 0;
       notificacionesProximasTotalMostradas = 0;
       
-      construirListaNotificaciones(contactosData, 'due');
+      if (tabUpcoming && tabDue) {
+        tabUpcoming.classList.add('active', 'btn-outline-primary');
+        tabUpcoming.classList.remove('btn-outline-secondary');
+        tabDue.classList.remove('active', 'btn-outline-primary');
+        tabDue.classList.add('btn-outline-secondary');
+      }
+      construirListaNotificaciones(contactosData, 'upcoming');
       togglePanelNotificaciones();
     });
   }
@@ -2836,7 +2843,13 @@ const buscador = document.getElementById("buscador");
 if (buscador) {
   buscador.addEventListener("input", function () {
     searchQuery = this.value;
-    aplicarFiltro({ resetPage: true });
+    if (searchDebounceId) {
+      clearTimeout(searchDebounceId);
+    }
+    searchDebounceId = setTimeout(() => {
+      aplicarFiltro({ resetPage: true });
+      searchDebounceId = null;
+    }, 200);
   });
 }
   // Filtro select
