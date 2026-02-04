@@ -300,11 +300,22 @@
     <div class="d-grid gap-2 my-3">
       <button type="button" id="guardarDatos" class="btn btn-success"><i class="bi bi-save"></i> Guardar</button>
     </div>
-    <div style="display: flex; gap: 10px; margin-top: 10px;">
-      <button type="button" id="exportarWord" class="btn btn-primary" disabled><i class="bi bi-download"></i> Exportar a Word</button>
-       <button id="exportarZip" class="btn btn-primary">
-    <i class="bi bi-folder-symlink"></i> Exportar carpeta
-  </button>
+    <div class="export-card">
+      <div class="export-header">
+        <div>
+          <h3>Exportar ficha</h3>
+          <p>Descarga la ficha en Word o la carpeta con adjuntos.</p>
+        </div>
+        <i class="bi bi-file-earmark-text"></i>
+      </div>
+      <div class="export-actions">
+        <button type="button" id="exportarWord" class="btn btn-primary export-btn" disabled>
+          <i class="bi bi-download"></i> Exportar a Word
+        </button>
+        <button id="exportarZip" class="btn btn-primary export-btn">
+          <i class="bi bi-folder-symlink"></i> Exportar carpeta
+        </button>
+      </div>
     </div>
 
   </form>
