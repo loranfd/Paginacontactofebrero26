@@ -28,6 +28,7 @@ let filtroViabilidadActivo = false;
 // Variables para paginación
 let paginaActual = 1;
 const CONTACTOS_POR_PAGINA = 20;
+let searchQuery = '';
 // Función auxiliar para normalización de strings (nueva para reutilización)
 
 // --- Función universal con reintento automático ---
@@ -52,6 +53,12 @@ async function safeFetch(url, options = {}, retries = 2) {
 
 function normalizeString(value) {
   return String(value || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+function coincideBusquedaContacto(contacto, query) {
+  if (!query) return true;
+  const nombreNormalizado = normalizeString(contacto['your-name'] || '').replace(/[^a-z0-9]+/g, '');
+  const telefonoNormalizado = String(contacto['tel-686'] || '').replace(/\D/g, '');
+  return nombreNormalizado.includes(query) || telefonoNormalizado.includes(query);
 }
 // Nueva función para clasificar recordatorios por urgencia
 function clasificarRecordatorio(contacto) {
@@ -1615,7 +1622,21 @@ if (renderTimeoutId) {
   // Unir las listas para renderizar
   // Unir las listas para renderizar
   const contactosARenderizar = [...contactosNormales, ...contactosEliminados];
-  
+  const totalPaginas = Math.max(1, Math.ceil(contactosARenderizar.length / CONTACTOS_POR_PAGINA));
+  if (paginaActual > totalPaginas) {
+    paginaActual = totalPaginas;
+  }
+  if (paginaActual < 1) {
+    paginaActual = 1;
+  }
+
+  if (ultimoIdInteractuado) {
+    const indexActualizado = contactosARenderizar.findIndex(c => String(c.ID) === String(ultimoIdInteractuado));
+    if (indexActualizado !== -1) {
+      paginaActual = Math.floor(indexActualizado / CONTACTOS_POR_PAGINA) + 1;
+    }
+  }
+
   // Calcular paginación
   const inicio = (paginaActual - 1) * CONTACTOS_POR_PAGINA;
   const fin = inicio + CONTACTOS_POR_PAGINA;
@@ -1755,40 +1776,79 @@ function actualizarControlesPaginacion(totalContactos) {
   }
   
   paginacionDiv.style.display = 'flex';
-  
+
+  const crearSeparador = () => {
+    const sep = document.createElement('span');
+    sep.className = 'paginacion-separator';
+    sep.textContent = '|';
+    return sep;
+  };
+
+  const crearBotonPagina = (label, page, { active = false, disabled = false, ariaLabel } = {}) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = `paginacion-btn${active ? ' active' : ''}`;
+    btn.textContent = label;
+    btn.disabled = disabled;
+    if (ariaLabel) btn.setAttribute('aria-label', ariaLabel);
+    if (!disabled && page) {
+      btn.addEventListener('click', () => {
+        paginaActual = page;
+        mostrarContactos(contactosData);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
+    return btn;
+  };
+
   // Botón Anterior
-  const btnAnterior = document.createElement('button');
-  btnAnterior.className = 'btn btn-sm btn-outline-primary';
-  btnAnterior.textContent = '« Anterior';
-  btnAnterior.disabled = paginaActual === 1;
-  btnAnterior.addEventListener('click', () => {
-    if (paginaActual > 1) {
-      paginaActual--;
-      mostrarContactos(contactosData);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+  paginacionDiv.appendChild(crearBotonPagina('Anterior', paginaActual - 1, {
+    disabled: paginaActual === 1,
+    ariaLabel: 'Página anterior'
+  }));
+
+  paginacionDiv.appendChild(crearSeparador());
+
+  // Números de página
+  const contenedorNumeros = document.createElement('div');
+  contenedorNumeros.className = 'paginacion-numeros';
+
+  const maxVisible = 7;
+  let paginas = [];
+  if (totalPaginas <= maxVisible) {
+    paginas = Array.from({ length: totalPaginas }, (_, i) => i + 1);
+  } else {
+    const start = Math.max(2, paginaActual - 1);
+    const end = Math.min(totalPaginas - 1, paginaActual + 1);
+    paginas = [1];
+    if (start > 2) paginas.push('...');
+    for (let i = start; i <= end; i++) paginas.push(i);
+    if (end < totalPaginas - 1) paginas.push('...');
+    paginas.push(totalPaginas);
+  }
+
+  paginas.forEach((item) => {
+    if (item === '...') {
+      const ellipsis = document.createElement('span');
+      ellipsis.className = 'paginacion-ellipsis';
+      ellipsis.textContent = '…';
+      contenedorNumeros.appendChild(ellipsis);
+      return;
     }
+    contenedorNumeros.appendChild(crearBotonPagina(String(item), item, {
+      active: item === paginaActual,
+      ariaLabel: `Página ${item}`
+    }));
   });
-  paginacionDiv.appendChild(btnAnterior);
-  
-  // Información de página
-  const infoSpan = document.createElement('span');
-  infoSpan.className = 'mx-3';
-  infoSpan.textContent = `Página ${paginaActual} de ${totalPaginas}`;
-  paginacionDiv.appendChild(infoSpan);
-  
+
+  paginacionDiv.appendChild(contenedorNumeros);
+  paginacionDiv.appendChild(crearSeparador());
+
   // Botón Siguiente
-  const btnSiguiente = document.createElement('button');
-  btnSiguiente.className = 'btn btn-sm btn-outline-primary';
-  btnSiguiente.textContent = 'Siguiente »';
-  btnSiguiente.disabled = paginaActual === totalPaginas;
-  btnSiguiente.addEventListener('click', () => {
-    if (paginaActual < totalPaginas) {
-      paginaActual++;
-      mostrarContactos(contactosData);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  });
-  paginacionDiv.appendChild(btnSiguiente);
+  paginacionDiv.appendChild(crearBotonPagina('Siguiente', paginaActual + 1, {
+    disabled: paginaActual === totalPaginas,
+    ariaLabel: 'Página siguiente'
+  }));
 }
 
 /**
@@ -1796,12 +1856,6 @@ function actualizarControlesPaginacion(totalContactos) {
  * @param {string} campo - 'documentacion', 'Llamado' o 'Respondido'
  */
 function ordenarCiclico(campo) {
-  const tbody = document.querySelector('#tabla-contactos tbody');
-  if (!tbody) {
-    console.error('No se encontró tbody');
-    return;
-  }
-
   estadosOrden[campo] = (estadosOrden[campo] + 1) % 3;
   const estado = estadosOrden[campo];
   sortColumn = null; // Resetear el otro sistema de orden
@@ -1820,88 +1874,7 @@ Object.keys(estadosOrden).forEach(key => {
 });
 estadosOrden[campo] = estado; // Mantener el estado del campo activo
   console.log('Estados orden tras reset:', estadosOrden);
-
-  const obtenerValor = (contacto) => {
-    if (campo === 'your-name') {
-      const valor = normalizeString(contacto[campo] || '');
-      return valor; // Para orden alfabético
-    }
-    const valor = normalizeString(contacto[campo] || ''); // Vacío se normaliza a ''
-    if (campo === 'documentacion' || campo === 'Llamado' || campo === 'Respondido') {
-      return valor === 'si' ? 1 : 0; // Vacío o 'no' = 0
-    }
-    return 0;
-  };
-
-  let datosOrdenados = [...contactosData];
-
-  if (estado === 0) {
-    console.log('Estado 0: Restaurando orden original para todas las columnas, incluyendo Nombre');
-    datosOrdenados.sort((a, b) => {
-      const idxA = ordenOriginal.indexOf(a.ID);
-      const idxB = ordenOriginal.indexOf(b.ID);
-      return idxA - idxB;
-    });
-  } else if (estado === 1) {
-    if (campo === 'documentacion') {
-      console.log('Estado 1: Ordenando CON doc arriba (check marcado primero, vacíos y no abajo)');
-      datosOrdenados.sort((a, b) => {
-        const valA = obtenerValor(a);
-        const valB = obtenerValor(b);
-        return valB - valA; // Desc: 1 ('si') primero, 0 (vacío/'no') abajo
-      });
-    } else if (campo === 'your-name') {
-      console.log('Estado 1: Ordenando Nombre alfabéticamente ASC');
-      datosOrdenados.sort((a, b) => {
-        const valA = obtenerValor(a);
-        const valB = obtenerValor(b);
-        return valA.localeCompare(valB); // Alfabético ascendente
-      });
-    } else {
-      console.log(`Estado 1: Ordenando ${campo} NO arriba (sin check o vacíos primero)`);
-      datosOrdenados.sort((a, b) => {
-        const valA = obtenerValor(a);
-        const valB = obtenerValor(b);
-        return valA - valB; // Asc: 0 (vacío/'no') primero, 1 ('si') abajo
-      });
-    }
-  } else if (estado === 2) {
-    if (campo === 'documentacion') {
-      console.log('Estado 2: Ordenando SIN doc arriba (sin check o vacíos primero)');
-      datosOrdenados.sort((a, b) => {
-        const valA = obtenerValor(a);
-        const valB = obtenerValor(b);
-        return valA - valB; // Asc: 0 (vacío/'no') primero, 1 ('si') abajo
-      });
-    } else if (campo === 'your-name') {
-      console.log('Estado 2: Ordenando Nombre alfabéticamente DESC');
-      datosOrdenados.sort((a, b) => {
-        const valA = obtenerValor(a);
-        const valB = obtenerValor(b);
-        return valB.localeCompare(valA); // Alfabético descendente
-      });
-    } else {
-      console.log(`Estado 2: Ordenando ${campo} SÍ arriba (check marcado primero)`);
-      datosOrdenados.sort((a, b) => {
-        const valA = obtenerValor(a);
-        const valB = obtenerValor(b);
-        return valB - valA; // Desc: 1 ('si') primero, 0 (vacío/'no') abajo
-      });
-    }
-  }
-
-  console.log('Orden final de IDs:', datosOrdenados.map(c => c.ID));
-  console.log('Valores en orden final:', datosOrdenados.map(c => {
-    const val = normalizeString(c[campo] || '');
-    return campo === 'your-name' ? val : (val === 'si' ? 'si (check)' : (val === '' ? 'vacío (como no)' : 'no/sin'));
-  }));
-  console.log('Estado de your-name:', estadosOrden['your-name']);
-  console.log('===================');
-
-  // (Nuevo final de la función)
-contactosData = datosOrdenados; // Actualizar el array global
-reordenarDOM(); // Reordenar el DOM eficientemente
-
+  aplicarFiltro({ resetPage: true });
   actualizarIndicadoresOrden(campo, estado);
 }
 
@@ -2599,8 +2572,8 @@ async function cargarYMostrar() {
   }
 }
 // ====================== FILTROS MEJORADOS ======================
-function aplicarFiltro() {
-	paginaActual = 1; // Resetear a página 1
+function aplicarFiltro({ resetPage = true } = {}) {
+	if (resetPage) paginaActual = 1; // Resetear a página 1
   const filtroSelect = document.getElementById('filtroVivienda');
   const toggleEliminados = document.getElementById('toggleEliminados');
   const toggleViabilidad = document.getElementById('toggleViabilidad');
@@ -2640,6 +2613,11 @@ function aplicarFiltro() {
       const estudioValor = normalizeString(c['estudio-viabilidad'] || '');
       return estudioValor === 'si' || estudioValor === 'sí';
     });
+  }
+
+  const queryNormalizada = normalizeString(searchQuery).replace(/[^a-z0-9]+/g, '');
+  if (queryNormalizada) {
+    contactosFiltrados = contactosFiltrados.filter(c => coincideBusquedaContacto(c, queryNormalizada));
   }
   
   // --- INICIO DE LA MODIFICACIÓN ---
@@ -2854,28 +2832,8 @@ if (thNombre) {
 const buscador = document.getElementById("buscador");
 if (buscador) {
   buscador.addEventListener("input", function () {
-    const query = this.value.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, "");
-    const tbody = document.querySelector('#tabla-contactos tbody');
-    if (!tbody) return;
-    
-    if (query === "") {
-      tbody.querySelectorAll('tr').forEach(tr => {
-        tr.style.display = '';
-        if (tr.classList.contains('fila-detalle')) {
-          tr.style.display = 'none';
-        } else {
-          const btnDetalle = tr.querySelector('button[data-toggle="detalle"]');
-          if (btnDetalle) {
-            btnDetalle.classList.remove('abierto');
-            const span = btnDetalle.querySelector('span');
-            if (span) span.textContent = '▼';
-            btnDetalle.setAttribute('aria-expanded', 'false');
-          }
-        }
-      });
-      return;
-    }
-    filtrarFilasPorBusqueda(query);
+    searchQuery = this.value;
+    aplicarFiltro({ resetPage: true });
   });
 }
   // Filtro select
@@ -2891,37 +2849,7 @@ actualizarIndicadoresOrden(null, 0); // Limpia indicadores cíclicos
       const column = th.dataset.sort;
       if (sortColumn === column) sortDirection *= -1;
       else { sortColumn = column; sortDirection = 1; }
-      const sortedData = [...contactosData].sort((a, b) => {
-        let valA = a[column] || '';
-        let valB = b[column] || '';
-        if (column === 'FechaSeguimiento') {
-          valA = valA ? new Date(valA).getTime() : 0;
-          valB = valB ? new Date(valB).getTime() : 0;
-        } else if (column === 'Prioridad') {
-          // Mapa robusto (todo minúsculas)
-          const order = { 'alta': 3, 'media': 2, 'baja': 1 };
-          
-          // Normalizamos el valor actual a minúsculas
-          const safeA = normalizeString(a[column] || '');
-          const safeB = normalizeString(b[column] || '');
-          
-          valA = order[safeA] || 0;
-          valB = order[safeB] || 0;
-        } else if (column === 'Estado') {
-          const orderEstado = { 'Sin Llamar': 1, 'Llamado': 2, 'Respondido': 3 };
-          valA = orderEstado[valA] || 0;
-          valB = orderEstado[valB] || 0;
-        } else {
-          valA = String(valA).toLowerCase();
-          valB = String(valB).toLowerCase();
-        }
-        return (valA < valB ? -1 : valA > valB ? 1 : 0) * sortDirection;
-      });
-     // (Nuevo final del listener)
-contactosData = sortedData; // Actualizar el array global
-reordenarDOM(); // Reordenar el DOM eficientemente
-      document.querySelectorAll('.sortable').forEach(t => t.innerHTML = t.innerHTML.replace(' ↑','').replace(' ↓',''));
-      th.innerHTML += sortDirection === 1 ? ' ↑' : ' ↓';
+      aplicarFiltro({ resetPage: true });
     });
   });
   // Spinner CSS
