@@ -58,6 +58,9 @@ function normalizeString(value) {
 function prepararContacto(contacto) {
   contacto._searchNombre = normalizeString(contacto['your-name'] || '').replace(/[^a-z0-9]+/g, '');
   contacto._searchTelefono = String(contacto['tel-686'] || '').replace(/\D/g, '');
+  const avisoKey = `${contacto['FechaNotificacion'] || ''}|${contacto['HoraNotificacion'] || ''}|${contacto['FechaSeguimiento'] || ''}`;
+  contacto._avisoKey = avisoKey;
+  contacto._avisoDate = null;
   return contacto;
 }
 function coincideBusquedaContacto(contacto, query) {
@@ -230,6 +233,13 @@ function parseFechaFlexible(valor) {
 }
 // CAMBIADO - Reemplazar toda la función obtenerFechaAvisoDate por esta versión:
 function obtenerFechaAvisoDate(contacto) {
+  if (contacto && typeof contacto === 'object') {
+    const avisoKey = `${contacto['FechaNotificacion'] || ''}|${contacto['HoraNotificacion'] || ''}|${contacto['FechaSeguimiento'] || ''}`;
+    if (contacto._avisoKey === avisoKey && contacto._avisoDate instanceof Date) {
+      return contacto._avisoDate;
+    }
+    contacto._avisoKey = avisoKey;
+  }
   const fechaCampo = contacto['FechaNotificacion'];
   const horaCampo = contacto['HoraNotificacion'];
   
@@ -243,6 +253,9 @@ function obtenerFechaAvisoDate(contacto) {
       const fechaLocal = new Date(fechaHoraString);
       
       if (!isNaN(fechaLocal) && fechaLocal.getFullYear() > 1970) {
+        if (contacto && typeof contacto === 'object') {
+          contacto._avisoDate = fechaLocal;
+        }
         return fechaLocal;
       }
     }
@@ -255,9 +268,18 @@ function obtenerFechaAvisoDate(contacto) {
   }
   
   const d2 = parseFechaFlexible(fallback);
-  if (!isNaN(d2) && d2.getFullYear() > 1970) return d2;
+  if (!isNaN(d2) && d2.getFullYear() > 1970) {
+    if (contacto && typeof contacto === 'object') {
+      contacto._avisoDate = d2;
+    }
+    return d2;
+  }
   
-  return new Date('');
+  const invalida = new Date('');
+  if (contacto && typeof contacto === 'object') {
+    contacto._avisoDate = invalida;
+  }
+  return invalida;
 }
 function esRecordatorioPendiente(contacto) {
   const d = obtenerFechaAvisoDate(contacto);
