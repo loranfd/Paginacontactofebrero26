@@ -55,10 +55,15 @@ async function safeFetch(url, options = {}, retries = 2) {
 function normalizeString(value) {
   return String(value || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
+function prepararContacto(contacto) {
+  contacto._searchNombre = normalizeString(contacto['your-name'] || '').replace(/[^a-z0-9]+/g, '');
+  contacto._searchTelefono = String(contacto['tel-686'] || '').replace(/\D/g, '');
+  return contacto;
+}
 function coincideBusquedaContacto(contacto, query) {
   if (!query) return true;
-  const nombreNormalizado = normalizeString(contacto['your-name'] || '').replace(/[^a-z0-9]+/g, '');
-  const telefonoNormalizado = String(contacto['tel-686'] || '').replace(/\D/g, '');
+  const nombreNormalizado = contacto._searchNombre ?? (contacto._searchNombre = normalizeString(contacto['your-name'] || '').replace(/[^a-z0-9]+/g, ''));
+  const telefonoNormalizado = contacto._searchTelefono ?? (contacto._searchTelefono = String(contacto['tel-686'] || '').replace(/\D/g, ''));
   return nombreNormalizado.includes(query) || telefonoNormalizado.includes(query);
 }
 // Nueva función para clasificar recordatorios por urgencia
@@ -292,9 +297,15 @@ async function marcarRecordatorioHecho(id) {
 
     // 4. Sincronizar datos locales y refrescar (Ver CAMBIO #4)
     const contactoLocal = contactosData.find(c => c.ID === id);
-    if (contactoLocal) Object.assign(contactoLocal, result.data);
+    if (contactoLocal) {
+      Object.assign(contactoLocal, result.data);
+      prepararContacto(contactoLocal);
+    }
     const contactoOriginal = originalContactosData.find(c => c.ID === id);
-    if (contactoOriginal) Object.assign(contactoOriginal, result.data);
+    if (contactoOriginal) {
+      Object.assign(contactoOriginal, result.data);
+      prepararContacto(contactoOriginal);
+    }
 
     aplicarFiltro({ resetPage: false }); // Refresca la tabla manteniendo el orden
 
@@ -399,6 +410,7 @@ async function ocultarFila(id) {
     const contacto = originalContactosData.find(c => c.ID === id);
     if (contacto) {
       contacto.eliminado = 'si';
+      prepararContacto(contacto);
     }
     
     // Re-aplicar filtro para actualizar vista sin reiniciar página
@@ -425,6 +437,7 @@ async function restaurarFila(id) {
     const contacto = originalContactosData.find(c => c.ID === id);
     if (contacto) {
       contacto.eliminado = 'no';
+      prepararContacto(contacto);
     }
     
     // Re-aplicar filtro para actualizar vista sin reiniciar página
@@ -840,9 +853,15 @@ function crearBotonPrioridad(id, prioridad) {
 
         // 3. Actualizar datos locales (AMBOS caches)
         const contactoLocal = contactosData.find(c => c.ID === id);
-        if (contactoLocal) Object.assign(contactoLocal, filaData);
+        if (contactoLocal) {
+          Object.assign(contactoLocal, filaData);
+          prepararContacto(contactoLocal);
+        }
         const contactoOriginal = originalContactosData.find(c => c.ID === id);
-        if (contactoOriginal) Object.assign(contactoOriginal, filaData);
+        if (contactoOriginal) {
+          Object.assign(contactoOriginal, filaData);
+          prepararContacto(contactoOriginal);
+        }
         
         // 4. ¡LA SOLUCIÓN!
         aplicarFiltro({ resetPage: false });
@@ -2564,7 +2583,7 @@ async function cargarContactos(incluirEliminados = false) {
 }
 async function cargarYMostrar() {
   try {
-    const todosLosDatos = await cargarContactos(true);
+    const todosLosDatos = (await cargarContactos(true)).map(prepararContacto);
     originalContactosData = todosLosDatos;
     ordenOriginal = todosLosDatos.map(c => c.ID); // Asegura ordenOriginal
     contactosData = todosLosDatos.reverse(); // Invertir: más reciente primero
