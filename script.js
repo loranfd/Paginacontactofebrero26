@@ -3014,4 +3014,5 @@ function reordenarDOM() {
   // Limpiar y añadir el fragmento ordenado de una sola vez
   tbody.innerHTML = '';
   tbody.appendChild(fragment);
+
 }
