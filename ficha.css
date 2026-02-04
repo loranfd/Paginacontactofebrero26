@@ -144,6 +144,68 @@ body {
   margin-right: 8px;
 }
 
+/* Tarjeta de exportación */
+.export-card {
+  margin-top: 16px;
+  padding: 16px 20px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f7fdf0 0%, #effad9 100%);
+  border: 1px solid #d7e7a2;
+  box-shadow: 0 10px 22px rgba(132, 153, 1, 0.18);
+}
+
+.export-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.export-header h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0;
+  color: #4d5c00;
+}
+
+.export-header p {
+  margin: 4px 0 0;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.export-header i {
+  font-size: 2rem;
+  color: #849901;
+}
+
+.export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.export-btn {
+  width: auto;
+  flex: 1 1 220px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.export-btn.btn-primary {
+  background: linear-gradient(135deg, #6a1b9a, #8e24aa);
+  border-color: transparent;
+  box-shadow: 0 8px 18px rgba(106, 27, 154, 0.25);
+}
+
+.export-btn:disabled {
+  opacity: 0.65;
+  box-shadow: none;
+}
+
 @media (max-width: 768px) {
   .container {
     max-width: 100%;
@@ -182,6 +244,9 @@ body {
 
   .navbar {
     padding: 10px 15px;
+  }
+  .export-actions {
+    flex-direction: column;
   }
 }
 

@@ -238,6 +238,65 @@ body {
   margin-right: 8px;
 }
 
+/* Tarjeta de exportación */
+.export-card {
+  margin-top: 16px;
+  padding: 16px 20px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f8fbff 0%, #eef4ff 100%);
+  border: 1px solid #dbe6ff;
+  box-shadow: 0 10px 22px rgba(52, 152, 219, 0.12);
+}
+
+.export-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.export-header h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0;
+  color: #2c3e50;
+}
+
+.export-header p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+.export-header i {
+  font-size: 2rem;
+  color: #3498db;
+}
+
+.export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.export-btn {
+  width: auto;
+  max-width: none;
+  flex: 1 1 220px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #3498db, #2d6cdf);
+  box-shadow: 0 8px 18px rgba(52, 152, 219, 0.25);
+}
+
+.export-btn:disabled {
+  opacity: 0.65;
+  box-shadow: none;
+}
+
 /* Alineación de botones y texto */
 .d-flex.align-items-center {
   display: flex;
@@ -313,6 +372,9 @@ body {
   .d-flex.gap-4 {
     flex-direction: column;
     gap: 10px;
+  }
+  .export-actions {
+    flex-direction: column;
   }
 }
 
